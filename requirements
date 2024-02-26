@@ -1,8 +1,8 @@
-Project description:
+Project Description:
 
 Our project aims to develop an interactive attendance application tailored for educational institutions, similar to TopHat. Leveraging the precision of a Geolocation API, the app will ensure that students are within the vicinity of the lecture hall to mark attendance, enhancing the reliability of the process. Additionally, incorporating a QR code API will allow for a secondary attendance verification, wherein a QR code displayed during the lecture can be scanned by students as proof of attendance. To streamline user access, the app will integrate third-party OAuth for secure authentication using school email accounts. A robust database will be employed to maintain records of user profiles, attendance logs, class schedules, and geolocation coordinates, ensuring data integrity and easy retrieval for reporting purposes. Our solution is designed to simplify attendance tracking, reduce administrative workload, and provide a seamless user experience for both students and educators.
 
-Product management:
+Product Management:
 
 Product Requirements:
 
@@ -28,7 +28,7 @@ Epic: Attendance System Implementation
 
 User Story 1: As a student, I want to check into my class with one click on my phone, so that I can confirm my attendance without disrupting my focus on the lecture.
 
-Task: Integrate Geolocation API
+Task: Implement Geolocation API
 Ticket 1: Geolocation Accuracy Improvement
 Enhance the precision of the Geolocation API to ensure it accurately reflects the students’ presence in the lecture hall.
 Ticket 2: Geolocation User Interface Design
@@ -50,5 +50,3 @@ User Data: Securely store student and faculty profiles with authentication detai
 Class Data: Include course schedules, location information, and associated geolocation coordinates.
 Attendance Data: Record attendance timestamps, methods (Geolocation or QR), attendance scores, and attendance status.
 System Logs: Keep logs of system usage, errors, and access attempts for security and auditing purposes.
-Remember to consider data privacy laws and regulations in your design to ensure compliance and secure handling of personal information​​.
-
