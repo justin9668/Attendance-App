@@ -6,7 +6,7 @@ function App() {
   const [qrCodeUrl, setQrCodeUrl] = useState('')
 
   const fetchCode = () => {
-    fetch('http://127.0.0.1:8080/api/code')
+    fetch('http://127.0.0.1:5000/api/code')
       .then(response => response.text())
       .then(data => {
         setCode(data)
@@ -16,7 +16,7 @@ function App() {
   }
 
   const fetchQRCode = () => {
-    fetch('http://127.0.0.1:8080/api/qrcode')
+    fetch('http://127.0.0.1:5000/api/qrcode')
       .then(response => {
         if (response.ok) {
           return response.blob()
