@@ -19,7 +19,7 @@ To install this project, follow these steps:
 2. Set up a virtual environment:
     ```bash
     cd server
-    python -m venv venv
+    python3 -m venv venv
     ```
 
 3. Activate the virtual environment:
