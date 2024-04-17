@@ -5,7 +5,7 @@ import random
 import requests
 
 app = Flask(__name__)
-cors = CORS(app, origins='*')
+CORS(app, origins="*")
 
 code = None
 
@@ -13,13 +13,13 @@ code = None
 def home():
     return "Here"
 
-@app.route("/api/code", methods=['GET'])
+@app.route("/api/code")
 def code():
     global code
     code = random.randint(1000, 9999)
     return str(code)
 
-@app.route("/api/qrcode", methods=['GET'])
+@app.route("/api/qrcode")
 def qrcode():
     global code
     if code is None:
