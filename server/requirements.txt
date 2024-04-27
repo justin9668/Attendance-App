@@ -1,3 +1,6 @@
 Flask
 Flask-CORS
 requests
+Flask-SQLAlchemy
+Authlib
+python-dotenv
