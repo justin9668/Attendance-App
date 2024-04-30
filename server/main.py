@@ -3,6 +3,7 @@ import os
 import random
 from datetime import datetime, timedelta
 from io import BytesIO
+from math import radians, cos, sin, asin, sqrt
 
 import requests
 from flask import Flask, abort, request, jsonify, send_file, redirect, url_for, session
@@ -44,19 +45,6 @@ google = oauth.register(
     server_metadata_url= 'https://accounts.google.com/.well-known/openid-configuration',
 )
 
-def get_location():
-    GOOGLE_GEOLOCATION_URL = "https://www.googleapis.com/geolocation/v1/geolocate"
-    response = requests.post(
-        f"{GOOGLE_GEOLOCATION_URL}?key={app.config['GOOGLE_API_KEY']}",
-        json={"considerIp": "true"}
-    )
-    if response.status_code == 200:
-        data = response.json().get('location', {})
-        return {'lat': data.get('lat'), 'lng': data.get('lng')}
-    else:
-        print(f"Error fetching geolocation: {response.text}")
-        return None
-
 def create_or_update_user(user_info, role):
     user_id = user_info.get('id')
     name = user_info.get('name')
@@ -78,6 +66,33 @@ def create_or_update_user(user_info, role):
     db.session.commit()
 
     return user
+
+def get_location():
+    GOOGLE_GEOLOCATION_URL = "https://www.googleapis.com/geolocation/v1/geolocate"
+    response = requests.post(
+        f"{GOOGLE_GEOLOCATION_URL}?key={app.config['GOOGLE_API_KEY']}",
+        json={"considerIp": "true"}
+    )
+    if response.status_code == 200:
+        data = response.json().get('location', {})
+        return {'lat': data.get('lat'), 'lng': data.get('lng')}
+    else:
+        print(f"Error fetching geolocation: {response.text}")
+        return None
+    
+def compare_location(lat1, lon1, lat2, lon2, max_distance=100):  # max_distance in meters
+    # Convert latitude and longitude from degrees to radians
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+
+    # Haversine formula to calculate the distance between two points on the Earth
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a))
+    r = 6371000  # Radius of Earth in meters
+    distance = c * r
+
+    return distance <= max_distance
 
 @app.route('/')
 def home():
@@ -372,26 +387,6 @@ def generate_qr_code(session_code):
 
     return jsonify(message='Failed to generate QR code, try again'), 500
 
-
-#compare location
-from math import radians, cos, sin, asin, sqrt
-
-def compare_location(lat1, lon1, lat2, lon2, max_distance=100):  # max_distance in meters
-    # Convert latitude and longitude from degrees to radians
-    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
-
-    # Haversine formula to calculate the distance between two points on the Earth
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a))
-    r = 6371000  # Radius of Earth in meters
-    distance = c * r
-
-    return distance <= max_distance
-
-
-
 # student endpoint
 @app.route('/api/submit_attendence', methods=['POST'])
 def submit_attendence():
@@ -419,9 +414,6 @@ def submit_attendence():
         if attendance_status:
             return jsonify(message='Attendance already recorded'), 409
         
-        
-        
-        #compare loc
         if compare_location(session.instructor_latitude, session.instructor_longitude, student_location['lat'], student_location['lng']):
             attendance = Attendance(session_id=session.id, student_id=student_id, attended=True)
             db.session.add(attendance)
