@@ -28,6 +28,8 @@ class Session(db.Model):
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
     is_active = db.Column(db.Boolean, default=False)
     attendances = db.relationship('Attendance', backref='session', lazy=True, cascade="all,delete")
+    instructor_latitude = db.Column(db.Float)
+    instructor_longitude = db.Column(db.Float)
 
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
