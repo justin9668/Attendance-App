@@ -10,7 +10,7 @@ from flask_cors import CORS
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 
-from models import db, Instructor, Student, Classroom, Session, Attendance
+from models import db, Instructor, Student, Course, Session, Attendance
 
 load_dotenv()
 
@@ -22,7 +22,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 db.init_app(app)
 
 with app.app_context():
-    db.drop_all() # temp
+    db.drop_all() # temp (clear database)
     db.create_all()
 
 # Update session cookie configurations
@@ -71,6 +71,47 @@ def create_or_update_user(user_info, role):
 def home():
     return "Here"
 
+# testing: get all instructors in the database
+@app.route('/api/instructors', methods=['GET'])
+def get_instructors():
+    instructors = Instructor.query.all()
+    instructor_names = [instructor.name for instructor in instructors]
+    return jsonify(instructor_names)
+
+# testing: get all students in the database
+@app.route('/api/students', methods=['GET'])
+def get_students():
+    students = Student.query.all()
+    student_names = [student.name for student in students]
+    return jsonify(student_names)
+
+# testing: get all courses in the database
+@app.route('/api/courses', methods=['GET'])
+def get_courses():
+    courses = Course.query.all()
+    if courses:
+        courses_data = [{'id': course.id, 'name': course.name, 'code': course.code, 'instructor_id': course.instructor_id} for course in courses]
+        return jsonify(courses_data), 200
+    return jsonify(message='No courses found'), 404
+
+# testing: get all sessions in the database
+@app.route('/api/sessions', methods=['GET'])
+def get_sessions():
+    sessions = Session.query.all()
+    if sessions:
+        sessions_data = [{'id': session.id, 'code': session.code, 'start_time': session.start_time, 'end_time': session.end_time, 'course_id': session.course_id, 'is_active': session.is_active} for session in sessions]
+        return jsonify(sessions_data), 200
+    return jsonify(message='No sessions found'), 404
+
+# testing: get all attendance records in the database
+@app.route('/api/attendance', methods=['GET'])
+def get_attendance():
+    attendances = Attendance.query.all()
+    if attendances:
+        attendance_data = [{'id': attendance.id, 'session_id': attendance.session_id, 'student_id': attendance.student_id, 'attended': attendance.attended} for attendance in attendances]
+        return jsonify(attendance_data), 200
+    return jsonify(message='No attendance records found'), 404
+
 @app.route('/auth/login', methods=['GET'])
 def login():
     role = request.args.get('role')
@@ -78,18 +119,13 @@ def login():
 
     state = hashlib.sha256(os.urandom(1024)).hexdigest()
     session['state'] = state    
-    print(f"State set in session: {session.get('state')}") # debugging
 
     redirect_uri = url_for('authorize', _external=True)
-    if 'state' not in session: # debugging
-        raise Exception("State not set in session.") # debugging
+
     return google.authorize_redirect(redirect_uri, state=state)
 
 @app.route('/authorize', methods=['GET'])
 def authorize():
-    # debugging
-    print(f"State in session: {session.get('state')}")
-    print(f"State in request: {request.args.get('state')}")
     if 'state' not in session or 'state' not in request.args:
         abort(400, description="Missing state parameter.")
     if session['state'] != request.args['state']:
@@ -118,20 +154,18 @@ def authorize():
 @app.route('/auth/logout', methods=['GET'])
 def logout():
     session.clear()
-    return jsonify(message="Successfully logged out"), 200
+    return jsonify(message="Logged out"), 200
 
 @app.route('/auth/check_auth', methods=['GET'])
 def check_auth():
     if 'user' in session:
         user_role = session['user']['role']
-        return jsonify({'isAuthenticated': True, 'role': user_role}), 200
+        return jsonify({'isAuthenticated': True}), 200
     else:
-        return jsonify({'isAuthenticated': False, 'role': None}), 401
+        return jsonify({'isAuthenticated': False}), 401
 
-# this route fetches from the session cookie
-# expand this route to include other user information
 @app.route('/api/user_info', methods=['GET'])
-def user_info():
+def get_user_info():
     if 'user' not in session:
         return jsonify(message='User not authenticated'), 401
     
@@ -145,164 +179,173 @@ def user_info():
         'role': role
     }
 
-    # fetch classes based on the user's role
     if role == 'instructor':
         instructor = Instructor.query.get(user_id)
-        if instructor:
-            classes = [{'id': classroom.id, 'name': classroom.name} for classroom in instructor.classrooms]
-            response_data['classes'] = classes if classes else []
-        else:
-            return jsonify(message='Instructor not found'), 404
+        courses = [{'id': course.id, 'name': course.name} for course in instructor.courses]
+        response_data['courses'] = courses if courses else []
     elif role == 'student':
         student = Student.query.get(user_id)
-        if student:
-            classes = [{'id': classroom.id, 'name': classroom.name} for classroom in student.classrooms]
-            response_data['classes'] = classes if classes else []
-        else:
-            return jsonify(message='Student not found'), 404
+        courses = [{'id': course.id, 'name': course.name} for course in student.courses]
+        response_data['courses'] = courses if courses else []
 
     return jsonify(response_data)
 
-# for testing purposes
-@app.route('/api/instructors', methods=['GET'])
-def get_instructors():
-    instructors = Instructor.query.all()
-    instructor_names = [instructor.name for instructor in instructors]
-    return jsonify(instructor_names)
-
-# for testing purposes
-@app.route('/api/students', methods=['GET'])
-def get_students():
-    students = Student.query.all()
-    student_names = [student.name for student in students]
-    return jsonify(student_names)
-
-# for testing purposes
-@app.route('/api/classrooms', methods=['GET'])
-def get_classrooms():
-    classrooms = Classroom.query.all()
-
-    if classrooms:
-        classroom_data = [{'id': classroom.id, 'name': classroom.name, 'instructor_id': classroom.instructor_id} for classroom in classrooms]
-        return jsonify(classroom_data), 200
-    else:
-        return jsonify(message='No classrooms found'), 404
-
-# for testing purposes
-# merged to /api/user_info
-@app.route('/api/instructor_classes', methods=['GET'])
-def instructor_classes():
+# instructor endpoint
+@app.route('/api/create_course', methods=['POST'])
+def create_course():
     instructor_id = session['user']['id']
-    instructor = Instructor.query.get(instructor_id)
-    classes = [{'id': classroom.id, 'name': classroom.name} for classroom in instructor.classrooms]
+    course_name = request.json.get('course_name')
+    course_code = str(random.randint(1000, 9999))
 
-    if not classes:
-        return jsonify(message='No classes found.'), 404
+    if not course_name:
+        return jsonify(message="Course name required"), 400
     
-    return jsonify(classes=classes)
+    new_course = Course(code=course_code, name=course_name, instructor_id=instructor_id)
+    db.session.add(new_course)
+    db.session.commit()
 
-# for testing purposes
-# merged to /api/user_info
-@app.route('/api/student_classes', methods=['GET'])
-def student_classes():
-    student_id = session['user']['id']
+    return jsonify(message='Course created', id=new_course.id, code=new_course.code, name=new_course.name), 200
+
+@app.route('/api/course_details/<int:course_id>', methods=['GET'])
+def get_course_details(course_id):
+    course = Course.query.get(course_id)
+    if not course:
+        return jsonify(message="Course not found"), 404
+
+    instructor = Instructor.query.get(course.instructor_id)
+    instructor_details = {
+        "id": instructor.id,
+        "name": instructor.name
+    }
+
+    students = []
+    for student in course.students:
+        total_attendance, total_sessions, attendance_ratio = calculate_student_attendance(student.id, course.id)
+
+        students.append({
+            "id": student.id,
+            "name": student.name,
+            "attendance": {
+                "attended_sessions": total_attendance,
+                "total_sessions": total_sessions,
+                "attendance_ratio": attendance_ratio
+            }
+        })
+
+    course_details = {
+        "id": course.id,
+        "name": course.name,
+        "code": course.code,
+        "instructor": instructor_details,
+        "students": students
+    }
+
+    return jsonify(course_details), 200
+
+# instructor endpoint
+@app.route('/api/remove_student', methods=['DELETE'])
+def remove_student():
+    student_id = request.json.get('student_id')
+    course_id = request.json.get('course_id')
+
     student = Student.query.get(student_id)
-    classes = [{'id': classroom.id, 'name': classroom.name} for classroom in student.classrooms]
+    course = Course.query.filter_by(id=course_id).first()
 
-    if not classes:
-        return jsonify(message='No classes found.'), 404
-    
-    return jsonify(classes=classes)
+    if not student or not course:
+        return jsonify(message='Invalid student or course'), 400
 
-# instructor endpoint
-@app.route('/api/create_classroom', methods=['POST'])
-def create_classroom():
-    instructor_id = session['user']['id']
-    classroom_name = request.json.get('classroom_name')
-    classroom_code = str(random.randint(1000, 9999))
-
-    if not classroom_name:
-        return jsonify(message="Classroom name is required."), 400
-    
-    new_classroom = Classroom(code=classroom_code, name=classroom_name, instructor_id=instructor_id)
-    db.session.add(new_classroom)
+    course.students.remove(student)
     db.session.commit()
 
-    return jsonify(id=new_classroom.id, code=new_classroom.code, name=new_classroom.name)
+    return jsonify(message='Student removed'), 200
 
 # instructor endpoint
-# implement frontend
-@app.route('/api/delete_classroom', methods=['POST'])
-def delete_classroom():
+@app.route('/api/delete_course', methods=['DELETE'])
+def delete_course():
     instructor_id = session['user']['id']
-    classroom_id = request.json.get('classroom_id')
-    classroom = Classroom.query.filter_by(id=classroom_id, instructor_id=instructor_id).first()
+    course_id = request.json.get('course_id')
+    course = Course.query.filter_by(id=course_id, instructor_id=instructor_id).first()
     
-    if not classroom:
-        return jsonify(message='Classroom not found'), 404
+    if not course:
+        return jsonify(message='Course not found'), 404
     
-    db.session.delete(classroom)
+    db.session.delete(course)
     db.session.commit()
     
-    return jsonify(message='Classroom deleted successfully'), 200
+    return jsonify(message='Course deleted'), 200
 
 # student endpoint
-# implement frontend
-@app.route('/api/join_classroom', methods=['POST'])
-def join_classroom():
+@app.route('/api/join_course', methods=['POST'])
+def join_course():
     student_id = session['user']['id']
-    classroom_code = request.json.get('classroom_code')
+    course_code = request.json.get('course_code')
 
-    classroom = Classroom.query.filter_by(code=classroom_code).first()
+    course = Course.query.filter_by(code=course_code).first()
     student = Student.query.get(student_id)
     
-    if not classroom:
-        return jsonify(message='Classroom not found'), 404
+    if not course:
+        return jsonify(message='Course not found'), 404
     
-    if student in classroom.students:
+    if student in course.students:
         return jsonify(message='Student already joined'), 409
     
-    classroom.students.append(student)
+    course.students.append(student)
     db.session.commit()
 
-    return jsonify(message='Joined successfully'), 200
+    return jsonify(message='Course joined'), 200
 
 # student endpoint
-# implement frontend
-@app.route('/api/leave_classroom', methods=['POST'])
-def leave_classroom():
+@app.route('/api/leave_course', methods=['DELETE'])
+def leave_course():
     student_id = session['user']['id']
-    classroom_id = request.json.get('classroom_id') # prolly wont work
+    course_id = request.json.get('course_id')
 
-    classroom = Classroom.query.filter_by(id=classroom_id).first()
+    course = Course.query.filter_by(id=course_id).first()
     student = Student.query.get(student_id)
 
-    classroom.students.remove(student)
+    course.students.remove(student)
     db.session.commit()
 
-    return jsonify(message='Successfully left the classroom'), 200
+    return jsonify(message='Course removed'), 200
 
 # instructor endpoint
-# implement frontend
-@app.route('/api/create_session', methods=['POST'])
-def create_session():
-    classroom_id = request.json.get('classroom_id') # prolly wont work
+@app.route('/api/session_status/<int:course_id>', methods=['GET'])
+def session_status(course_id):
+    session = Session.query.filter_by(course_id=course_id, is_active=True).first()
+    if session:
+        return jsonify(code=session.code, start_time=str(session.start_time), end_time=str(session.end_time), is_active=session.is_active), 200
+    return jsonify(is_active=False), 200
+
+# instructor endpoint
+@app.route('/api/start_session', methods=['POST'])
+def start_session():
+    course_id = request.json.get('course_id')
     start_time = datetime.now()
     duration = request.json.get('duration', 1)  # default duration is 1 hour for simplicity
     end_time = start_time + timedelta(hours=duration)
-
     session_code = random.randint(1000, 9999)
-    new_session = Session(code=session_code, start_time=start_time, end_time=end_time, classroom_id=classroom_id)
-        
+
+    new_session = Session(code=session_code, start_time=start_time, end_time=end_time, course_id=course_id, is_active=True)
     db.session.add(new_session)
     db.session.commit()
         
-    return jsonify(id=new_session.id, code=new_session.code, start_time=str(start_time), end_time=str(end_time))
+    return jsonify(message='Session Started', code=new_session.code, start_time=str(start_time), end_time=str(end_time)), 200
 
 # instructor endpoint
-# implement frontend
-@app.route('/api/qrcode/<session_code>', methods=["GET"])
-def qrcode(session_code):
+@app.route('/api/end_session', methods=['POST'])
+def end_session():
+    session_code = request.json.get('session_code')
+    session = Session.query.filter_by(code=session_code).first()
+    if session:
+        session.is_active = False
+        session.end_time = datetime.now()
+        db.session.commit()
+        return jsonify(message='Session Stopped'), 200
+    return jsonify(message='Session not found'), 404
+
+# instructor endpoint
+@app.route('/api/qr_code/<session_code>', methods=["GET"])
+def generate_qr_code(session_code):
     size = '200x200'
     api_url = f'https://api.qrserver.com/v1/create-qr-code/?data={session_code}&size={size}'
     response = requests.get(api_url)
@@ -315,22 +358,53 @@ def qrcode(session_code):
     return jsonify(message='Failed to generate QR code, try again'), 500
 
 # student endpoint
-# implement frontend
-@app.route('/api/verify_attendence', methods=['POST'])
-def verify_attendence():
-    student_id = session['user']['id']
+@app.route('/api/submit_attendence', methods=['POST'])
+def submit_attendence():
+    student_id = request.json.get('user_id')
+    course_id = request.json.get('course_id')
     session_code = request.json.get('session_code')
 
-    session = Session.query.filter_by(code=session_code).first()
-    student = Student.query.get(student_id)
+    session = Session.query.filter_by(code=session_code, course_id=course_id).first()
 
     if session:
-        attendance = Attendance(session_id=session.id, student_id=student.id, attended=True)
+        if session.is_active == False:
+            return jsonify(message='Attendance has closed'), 403
+        
+        if datetime.now() > session.end_time:
+            return jsonify(message='Attendance has ended'), 403
+
+        attendance_status = Attendance.query.filter_by(session_id=session.id, student_id=student_id).first()
+        if attendance_status:
+            return jsonify(message='Attendance already recorded'), 409
+        
+        attendance = Attendance(session_id=session.id, student_id=student_id, attended=True)
         db.session.add(attendance)
         db.session.commit()
-        return jsonify(message='Your attendence was recorded'), 200
+        return jsonify(message='Attendance recorded'), 200
     
     return jsonify(message='Incorrect code, try again'), 404
+
+@app.route('/api/student_attendance', methods=['GET'])
+def get_student_attendance():
+    student_id = request.args.get('user_id')
+    course_id = request.args.get('course_id')
+
+    total_attendance, total_sessions, attendance_ratio = calculate_student_attendance(student_id, course_id)
+
+    return jsonify( total_attendance=total_attendance, total_sessions=total_sessions, attendance_ratio=attendance_ratio), 200
+
+def calculate_student_attendance(student_id, course_id):
+    sessions = Session.query.filter_by(course_id=course_id).all()
+    total_attendance = 0
+
+    for session in sessions:
+        attendance = Attendance.query.filter_by(session_id=session.id, student_id=student_id).first()
+        if attendance and attendance.attended:
+            total_attendance += 1
+    
+    attendance_ratio = total_attendance / len(sessions) if sessions else 0
+
+    return total_attendance, len(sessions), attendance_ratio
 
 if __name__ == '__main__': 
     app.run(debug=True, host='localhost', port=3000)

@@ -6,27 +6,28 @@ db = SQLAlchemy()
 class Instructor(db.Model):
     id = db.Column(db.String(36), primary_key=True)
     name = db.Column(db.String(100))
-    classrooms = db.relationship('Classroom', backref='instructor', lazy=True)
+    courses = db.relationship('Course', backref='instructor', lazy=True)
 
 class Student(db.Model):
     id = db.Column(db.String(36), primary_key=True)
     name = db.Column(db.String(100))
-    classrooms = db.relationship('Classroom', secondary='student_classrooms', backref=db.backref('students', lazy=True))
+    courses = db.relationship('Course', secondary='student_courses', backref=db.backref('students', lazy=True))
 
-class Classroom(db.Model):
+class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(4), unique=True)
     name = db.Column(db.String(100))
+    code = db.Column(db.String(4), unique=True)
     instructor_id = db.Column(db.String(36), db.ForeignKey('instructor.id'))
-    sessions = db.relationship('Session', backref='classroom', lazy=True)
+    sessions = db.relationship('Session', backref='course', lazy=True, cascade="all,delete")
 
 class Session(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(4), unique=True)
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
     end_time = db.Column(db.DateTime, default=lambda: datetime.utcnow() + timedelta(hours=1))
-    classroom_id = db.Column(db.Integer, db.ForeignKey('classroom.id'))
-    attendances = db.relationship('Attendance', backref='session', lazy=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
+    is_active = db.Column(db.Boolean, default=False)
+    attendances = db.relationship('Attendance', backref='session', lazy=True, cascade="all,delete")
 
 class Attendance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -34,7 +35,7 @@ class Attendance(db.Model):
     student_id = db.Column(db.String(36), db.ForeignKey('student.id'))
     attended = db.Column(db.Boolean, default=False)
 
-student_classrooms = db.Table('student_classrooms',
+student_courses = db.Table('student_courses',
     db.Column('student_id', db.String(36), db.ForeignKey('student.id'), primary_key=True),
-    db.Column('classroom_id', db.Integer, db.ForeignKey('classroom.id'), primary_key=True)
+    db.Column('course_id', db.Integer, db.ForeignKey('course.id'), primary_key=True)
 )
