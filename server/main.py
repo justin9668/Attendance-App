@@ -16,21 +16,20 @@ load_dotenv()
 
 # App configuration
 app = Flask(__name__)
-CORS(app, origins='*', supports_credentials=True)
-app.secret_key = os.getenv('SECRET_KEY')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-db.init_app(app)
-
-with app.app_context():
-    db.drop_all() # temp (clear database)
-    db.create_all()
-
-# Update session cookie configurations
 app.config.update(
+    SECRET_KEY=os.getenv('SECRET_KEY'),
+    SQLALCHEMY_DATABASE_URI=os.getenv('DATABASE_URL'),
+    GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY'),
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SAMESITE='Lax'
 )
+CORS(app, origins='*', supports_credentials=True)
+
+db.init_app(app)
+with app.app_context():
+    db.drop_all() # clear database (temporary for testing)
+    db.create_all()
 
 # OAuth configuration
 oauth = OAuth(app)
@@ -45,33 +44,18 @@ google = oauth.register(
     server_metadata_url= 'https://accounts.google.com/.well-known/openid-configuration',
 )
 
-
-
-GOOGLE_GEOLOCATION_URL = "https://www.googleapis.com/geolocation/v1/geolocate"
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-
-
 def get_location():
-    post_data = {
-        "considerIp": "true"  # Consider the IP address of the request to guess the location
-    }
+    GOOGLE_GEOLOCATION_URL = "https://www.googleapis.com/geolocation/v1/geolocate"
     response = requests.post(
-        f"{GOOGLE_GEOLOCATION_URL}?key={GOOGLE_API_KEY}",
-        json=post_data
+        f"{GOOGLE_GEOLOCATION_URL}?key={app.config['GOOGLE_API_KEY']}",
+        json={"considerIp": "true"}
     )
     if response.status_code == 200:
-        geolocation_data = response.json()
-        # Extract latitude and longitude from the response
-        latitude = geolocation_data.get('location', {}).get('lat')
-        longitude = geolocation_data.get('location', {}).get('lng')
-        return {'lat': latitude, 'lng': longitude}
+        data = response.json().get('location', {})
+        return {'lat': data.get('lat'), 'lng': data.get('lng')}
     else:
-        # Log the error and/or handle it appropriately
         print(f"Error fetching geolocation: {response.text}")
         return None
-
-
-
 
 def create_or_update_user(user_info, role):
     user_id = user_info.get('id')
@@ -187,7 +171,6 @@ def logout():
 @app.route('/auth/check_auth', methods=['GET'])
 def check_auth():
     if 'user' in session:
-        user_role = session['user']['role']
         return jsonify({'isAuthenticated': True}), 200
     else:
         return jsonify({'isAuthenticated': False}), 401
