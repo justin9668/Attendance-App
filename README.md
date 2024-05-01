@@ -23,13 +23,13 @@ To install this project, follow these steps:
     ```
 
 3. Activate the virtual environment:
-    - On Windows:
-      ```bash
-      .\venv\Scripts\activate
-      ```
     - On macOS and Linux:
       ```bash
       source venv/bin/activate
+      ```
+    - On Windows:
+      ```bash
+      .\venv\Scripts\activate
       ```
 
 4. Install the required packages:
@@ -37,7 +37,16 @@ To install this project, follow these steps:
     pip install -r requirements.txt
     ```
 
-### Frontend Setup (React Vite)
+5. Create a `.env` file in the `server` directory and add the following environmental variables:
+    ```
+    GOOGLE_CLIENT_ID=your_google_client_id
+    GOOGLE_CLIENT_SECRET=your_google_client_secret
+    SECRET_KEY=your_secret_key
+    DATABASE_URL=your_database_url
+    GOOGLE_API_KEY=your_google_api_key
+    ```
+
+## Frontend Setup (React Vite)
 
 1. Navigate to the frontend directory:
     ```bash
