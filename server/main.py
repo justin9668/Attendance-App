@@ -394,17 +394,15 @@ def submit_attendence():
     course_id = request.json.get('course_id')
     session_code = request.json.get('session_code')
     
-    student_location = get_location()
-    #debugging
+    student_location = get_location()  # Get the student's location
     print("Student Location: Latitude = {}, Longitude = {}".format(student_location['lat'], student_location['lng']))
 
     session = Session.query.filter_by(code=session_code, course_id=course_id).first()
 
     if session:
-        #debugging instructor loc
         print("Instructor Location: Latitude = {}, Longitude = {}".format(session.instructor_latitude, session.instructor_longitude))
         
-        if session.is_active == False:
+        if not session.is_active:
             return jsonify(message='Attendance has closed'), 403
         
         if datetime.now() > session.end_time:
@@ -413,14 +411,18 @@ def submit_attendence():
         attendance_status = Attendance.query.filter_by(session_id=session.id, student_id=student_id).first()
         if attendance_status:
             return jsonify(message='Attendance already recorded'), 409
-        
+
+        # Use the compare_location function to check if the student is within 100 meters of the instructor
         if compare_location(session.instructor_latitude, session.instructor_longitude, student_location['lat'], student_location['lng']):
             attendance = Attendance(session_id=session.id, student_id=student_id, attended=True)
             db.session.add(attendance)
             db.session.commit()
-            return jsonify(message='Attendance recorded'), 200
+            return jsonify(message='Location within required proximity to instructor, Attendance recorded'), 200
+        else:
+            # If the student is not within the required proximity
+            return jsonify(message='Location not within required proximity to instructor'), 403
     
-    return jsonify(message='Incorrect code or Wrong, try again'), 404
+    return jsonify(message='Incorrect code or session not found, try again'), 404
 
 @app.route('/api/student_attendance', methods=['GET'])
 def get_student_attendance():
