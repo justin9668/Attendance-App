@@ -45,13 +45,13 @@ function Login() {
     <div className="Login">
       {!userRole && (
         <div>
-          <button onClick={() => handleRoleSelect('student')}>I'm a student</button>
-          <button onClick={() => handleRoleSelect('instructor')}>I'm an instructor</button>
+          <button className="button" onClick={() => handleRoleSelect('student')}>I'm a student</button>
+          <button className="button" onClick={() => handleRoleSelect('instructor')}>I'm an instructor</button>
         </div>
       )}
       {userRole && (
         <>
-          <button onClick={handleLogin}>Login</button>
+          <button className="button" onClick={handleLogin}>Login</button>
           {errorMessage && <p className="error">{errorMessage}</p>}
         </>
       )}
@@ -189,7 +189,7 @@ function Dashboard() {
     <h1>Dashboard</h1>
     {userName ? <h2>Welcome, {userName}</h2> : <p>'Failed to fetch user data.'</p>}
     {userRole === 'instructor' && !showForm && (
-      <button onClick={() => setShowForm(true)}>Create Course</button>
+      <button className="button" onClick={() => setShowForm(true)}>Create Course</button>
     )}
     {userRole === 'instructor' && showForm && (
       <>
@@ -199,12 +199,12 @@ function Dashboard() {
           onChange={e => setCourseName(e.target.value)}
           placeholder="Enter course name"
         />
-        <button onClick={handleCreateCourse}>Submit</button>
-        <button onClick={handleCancel}>Cancel</button>
+        <button className="button" onClick={handleCreateCourse}>Submit</button>
+        <button className="button" onClick={handleCancel}>Cancel</button>
       </>
     )}
     {userRole === 'student' && !showForm && (
-      <button onClick={() => setShowForm(true)}>Join Course</button>
+      <button className="button" onClick={() => setShowForm(true)}>Join Course</button>
     )}
     {userRole === 'student' && showForm && (
       <>
@@ -214,23 +214,25 @@ function Dashboard() {
           onChange={e => setCourseCode(e.target.value)}
           placeholder="Enter course code"
         />
-        <button onClick={handleJoinCourse}>Submit</button>
-        <button onClick={handleCancel}>Cancel</button>
+        <button className="button" onClick={handleJoinCourse}>Submit</button>
+        <button className="button" onClick={handleCancel}>Cancel</button>
       </>
     )}
-    <button onClick={handleLogout}>Logout</button>
+    <button className="button" onClick={handleLogout}>Logout</button>
     {errorMessage && <p className="error">{errorMessage}</p>}
     <h2>Your Courses</h2>
-        <ul>
-          {courses.map(course => (
-            <li key={course.id}>
-              {course.name}
-              <button onClick={() => handleCourseClick(course.id)}>
-                  {userRole === 'instructor' ? 'Manage' : 'View'}
-              </button>
-            </li>
-          ))}
-        </ul>
+    <ul className="student-list">
+      {courses.map(course => (
+        <li key={course.id} className="student-card">
+          <span className="student-info">
+          {course.name}
+          </span>
+          <button className="button" onClick={() => handleCourseClick(course.id)}>
+              {userRole === 'instructor' ? 'Manage' : 'View'}
+          </button>
+        </li>
+      ))}
+    </ul>
   </div>
 )
 }
@@ -421,19 +423,23 @@ function Course() {
   }
   
   const handleGenerateQRCode = () => {
-    fetch(`/api/qr_code/${sessionCode}`)
-      .then(response => {
-        if (response.ok) {
-          return response.blob()
-        }
-        throw new Error('Failed to generate QR code')
-      })
-      .then(blob => {
-        const url = URL.createObjectURL(blob)
-        setQRCodeURL(url)
-        setShowQRCode(true)
-      })
-      .catch(error => console.error('Error:', error))
+    if (!showQRCode) {
+      fetch(`/api/qr_code/${sessionCode}`)
+        .then(response => {
+          if (response.ok) {
+            return response.blob()
+          }
+          throw new Error('Failed to generate QR code')
+        })
+        .then(blob => {
+          const url = URL.createObjectURL(blob)
+          setQRCodeURL(url)
+          setShowQRCode(true)
+        })
+        .catch(error => console.error('Error:', error))
+    } else {
+      setShowQRCode(false);
+    }
   }  
 
   const handleSubmitAttendance = async () => {
@@ -540,7 +546,7 @@ function Course() {
       <div>
         <h1>Course Not Available</h1>
         <p>This course is not available.</p>
-        <button onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+        <button className="button" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
       </div>
     )
   }
@@ -551,31 +557,54 @@ function Course() {
       <h2>Course Details</h2>
       {userRole === 'instructor' && (
         <>
-          <p>Course Code: {courseCode}</p>
-          <button onClick={handleStartStopSession}>{sessionActive ? 'Stop Attendance' : 'Start Attendance'}</button>
-          {sessionActive && (
-            <>
-              <p>Session Code: {sessionCode}</p>
-              <p>Time: {new Date(startTime).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true})} to 
-              {new Date(endTime).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true})}</p>
-            </>
-          )}
-          {sessionActive && !showQRCode && <button onClick={handleGenerateQRCode}>Generate QR Code</button>}
-          {sessionActive && showQRCode && <img src={qrCodeUrl} alt="QR Code" />}
-          <button onClick={handleDeleteCourse}>Delete Course</button>
-          <button onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+          <div className="course-info">
+            <p><strong>Course Code: </strong>{courseCode}</p>
+            <div className="control-buttons">
+              {!sessionActive && (
+                <button className="button" onClick={handleStartStopSession}>
+                  Start Attendance
+                </button>
+              )}
+              <button className="button" onClick={handleDeleteCourse}>Delete Course</button>
+              <button className="button" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+            </div>
+          </div>
+
           {errorMessage && <p className="error">{errorMessage}</p>}
+          {sessionActive && (
+            <div className="session-details">
+              <button className="button" onClick={handleStartStopSession}>
+                {sessionActive ? 'Stop Attendance' : 'Start Attendance'}
+              </button>
+
+              <button className="button" onClick={handleGenerateQRCode}>
+                {showQRCode ? 'Hide QR Code' : 'Generate QR Code'}
+              </button>
+              {showQRCode && <img src={qrCodeUrl} alt="QR Code" />}
+              
+              <p className="session-info"><strong>Session Code: </strong>{sessionCode}</p>
+              <p className="session-info"><strong>Time: </strong> {new Date(startTime).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true})} - {new Date(endTime).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true})}</p>
+            </div>
+          )}
+
           <h2>Your Students</h2>
-          <ul>
+          <ul className="student-list">
             {students.map((student) => (
-              <li key={student.id}>
-                {student.name} - Attendance: {student.attendance.attended_sessions}/{student.attendance.total_sessions} ({(student.attendance.attendance_ratio * 100).toFixed(1)}%)
-                <button onClick={() => handleRemoveStudent(student.id)}>Remove</button>
-            </li>
+              <li key={student.id} className="student-card">
+                <span className="student-info">
+                  {student.name}
+                </span>
+                <span className="student-info">
+                  Attendance: {student.attendance.attended_sessions}/{student.attendance.total_sessions} ({(student.attendance.attendance_ratio * 100).toFixed(1)}%)
+                </span>
+                <button className="remove-button" onClick={() => handleRemoveStudent(student.id)}>Remove</button>
+              </li>
             ))}
           </ul>
         </>
       )}
+
+
       {userRole === 'student' && (
         <>
           <p>Your Instructor: {instructorDetails.name}</p>
@@ -588,14 +617,14 @@ function Course() {
                 onChange={e => setAttendCode(e.target.value)}
                 placeholder="Enter session code"
               />
-              <button onClick={handleSubmitAttendance}>Submit</button>
+              <button className="button" onClick={handleSubmitAttendance}>Submit</button>
               <button onClick={handleCancel}>Cancel</button>
             </>
           ) : (
-          <button onClick={() => setShowForm(true)}>Submit Attendance</button>
+          <button className="button" onClick={() => setShowForm(true)}>Submit Attendance</button>
           )}
-          <button onClick={handleLeaveCourse}>Leave Course</button>
-          <button onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+          <button className="button" onClick={handleLeaveCourse}>Leave Course</button>
+          <button className="button" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
           {errorMessage && <p className="error">{errorMessage}</p>}
         </>
       )}

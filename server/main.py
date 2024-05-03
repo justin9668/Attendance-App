@@ -417,10 +417,10 @@ def submit_attendence():
             attendance = Attendance(session_id=session.id, student_id=student_id, attended=True)
             db.session.add(attendance)
             db.session.commit()
-            return jsonify(message='Location within required proximity to instructor, Attendance recorded'), 200
+            return jsonify(message='Location within required proximity, Attendance recorded'), 200
         else:
             # If the student is not within the required proximity
-            return jsonify(message='Location not within required proximity to instructor'), 403
+            return jsonify(message='Location not within required proximity'), 403
     
     return jsonify(message='Incorrect code or session not found, try again'), 404
 
