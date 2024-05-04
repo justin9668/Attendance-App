@@ -186,55 +186,55 @@ function Dashboard() {
 
   return (
     <div>
-    <h1>Dashboard</h1>
-    {userName ? <h2>Welcome, {userName}</h2> : <p>'Failed to fetch user data.'</p>}
-    {userRole === 'instructor' && !showForm && (
-      <button className="button" onClick={() => setShowForm(true)}>Create Course</button>
-    )}
-    {userRole === 'instructor' && showForm && (
-      <>
-        <input
-          type="text"
-          value={courseName}
-          onChange={e => setCourseName(e.target.value)}
-          placeholder="Enter course name"
-        />
-        <button className="button" onClick={handleCreateCourse}>Submit</button>
-        <button className="button" onClick={handleCancel}>Cancel</button>
-      </>
-    )}
-    {userRole === 'student' && !showForm && (
-      <button className="button" onClick={() => setShowForm(true)}>Join Course</button>
-    )}
-    {userRole === 'student' && showForm && (
-      <>
-        <input
-          type="text"
-          value={courseCode}
-          onChange={e => setCourseCode(e.target.value)}
-          placeholder="Enter course code"
-        />
-        <button className="button" onClick={handleJoinCourse}>Submit</button>
-        <button className="button" onClick={handleCancel}>Cancel</button>
-      </>
-    )}
-    <button className="button" onClick={handleLogout}>Logout</button>
-    {errorMessage && <p className="error">{errorMessage}</p>}
-    <h2>Your Courses</h2>
-    <ul className="student-list">
-      {courses.map(course => (
-        <li key={course.id} className="student-card">
-          <span className="student-info">
-          {course.name}
-          </span>
-          <button className="button" onClick={() => handleCourseClick(course.id)}>
-              {userRole === 'instructor' ? 'Manage' : 'View'}
-          </button>
-        </li>
-      ))}
-    </ul>
-  </div>
-)
+      <h1>Dashboard</h1>
+      {userName ? <h2>Welcome, {userName}</h2> : <p>'Failed to fetch user data.'</p>}
+      {userRole === 'instructor' && !showForm && (
+        <button className="button" onClick={() => setShowForm(true)}>Create Course</button>
+      )}
+      {userRole === 'instructor' && showForm && (
+        <>
+          <input
+            type="text"
+            value={courseName}
+            onChange={e => setCourseName(e.target.value)}
+            placeholder="Enter course name"
+          />
+          <button className="button" onClick={handleCreateCourse}>Submit</button>
+          <button className="button" onClick={handleCancel}>Cancel</button>
+        </>
+      )}
+      {userRole === 'student' && !showForm && (
+        <button className="button" onClick={() => setShowForm(true)}>Join Course</button>
+      )}
+      {userRole === 'student' && showForm && (
+        <>
+          <input
+            type="text"
+            value={courseCode}
+            onChange={e => setCourseCode(e.target.value)}
+            placeholder="Enter course code"
+          />
+          <button className="button" onClick={handleJoinCourse}>Submit</button>
+          <button className="button" onClick={handleCancel}>Cancel</button>
+        </>
+      )}
+      <button className="button" onClick={handleLogout}>Logout</button>
+      {errorMessage && <p className="error">{errorMessage}</p>}
+      <h2>Your Courses</h2>
+      <ul className="student-list">
+        {courses.map(course => (
+          <li key={course.id} className="student-card">
+            <span className="student-info">
+              {course.name}
+            </span>
+            <button className="button" onClick={() => handleCourseClick(course.id)}>
+                {userRole === 'instructor' ? 'Manage' : 'View'}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 function Course() {
@@ -554,21 +554,20 @@ function Course() {
   return (
     <div>
       <h1>{courseName}</h1>
-      <h2>Course Details</h2>
       {userRole === 'instructor' && (
         <>
           <div className="course-info">
             <p><strong>Course Code: </strong>{courseCode}</p>
             <div className="control-buttons">
-              {!sessionActive && (
-                <button className="button" onClick={handleStartStopSession}>
-                  Start Attendance
-                </button>
-              )}
               <button className="button" onClick={handleDeleteCourse}>Delete Course</button>
               <button className="button" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
             </div>
           </div>
+            {!sessionActive && (
+                  <button className="button" onClick={handleStartStopSession}>
+                    Start Attendance
+                  </button>
+            )}
 
           {errorMessage && <p className="error">{errorMessage}</p>}
           {sessionActive && (
@@ -607,27 +606,37 @@ function Course() {
 
       {userRole === 'student' && (
         <>
-          <p>Your Instructor: {instructorDetails.name}</p>
-          <p>Your Attendance: {attendanceInfo.totalAttendance}/{attendanceInfo.totalSessions} ({(attendanceInfo.attendanceRatio * 100).toFixed(1)}%)</p>
+          <div className="course-info">
+            <p>Your Instructor: {instructorDetails.name}</p>
+            <p>Your Attendance: {attendanceInfo.totalAttendance}/{attendanceInfo.totalSessions} ({(attendanceInfo.attendanceRatio * 100).toFixed(1)}%)</p>
+            <div className="control-buttons">
+              <button className="button" onClick={handleLeaveCourse}>Leave Course</button>
+              <button className="button" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+            </div>
+          </div>
+
           {showForm ? (
-            <>
+            <div>
               <input
                 type="text"
                 value={attendCode}
                 onChange={e => setAttendCode(e.target.value)}
                 placeholder="Enter session code"
+                className="input"
               />
-              <button className="button" onClick={handleSubmitAttendance}>Submit</button>
-              <button onClick={handleCancel}>Cancel</button>
-            </>
+              <div className="control-buttons">
+                <button className="button" onClick={handleSubmitAttendance}>Submit</button>
+                <button className="button" onClick={handleCancel}>Cancel</button>
+              </div>
+            </div>
           ) : (
-          <button className="button" onClick={() => setShowForm(true)}>Submit Attendance</button>
+            <button className="button" onClick={() => setShowForm(true)}>Submit Attendance</button>
           )}
-          <button className="button" onClick={handleLeaveCourse}>Leave Course</button>
-          <button className="button" onClick={() => navigate('/dashboard')}>Back to Dashboard</button>
+
           {errorMessage && <p className="error">{errorMessage}</p>}
         </>
       )}
+
     </div>
   )
 }
