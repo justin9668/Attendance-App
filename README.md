@@ -12,8 +12,8 @@ To install this project, follow these steps:
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/neptunerv/CS411_Project.git
-    cd CS411_Project
+    git clone https://github.com/justin9668/Attendance-App.git
+    cd Attendance-App
     ```
 
 2. Set up a virtual environment:
